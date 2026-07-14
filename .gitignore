@@ -1,0 +1,12 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+
+# Go build outputs
+api/axon-api
+api/coverage.out
+*.test
+
+# OS metadata
+.DS_Store
