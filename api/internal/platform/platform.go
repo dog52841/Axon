@@ -46,6 +46,7 @@ type Store interface {
 	ListWorkspaces(context.Context, string, int, string) ([]Workspace, string, error)
 	ClaimReplay(context.Context, string, string, string) (Replay, bool, error)
 	CompleteReplay(context.Context, string, string, Replay) error
+	WithinTransaction(context.Context, func(context.Context) error) error
 }
 
 type Service struct{ store Store }
@@ -96,6 +97,9 @@ func (s *Service) ClaimReplay(ctx context.Context, org, key, fingerprint string)
 }
 func (s *Service) StoreReplay(ctx context.Context, org, key, fingerprint string, status int, body []byte, contentType string) error {
 	return s.store.CompleteReplay(ctx, org, key, Replay{Fingerprint: fingerprint, Status: status, Body: body, ContentType: contentType})
+}
+func (s *Service) WithinTransaction(ctx context.Context, operation func(context.Context) error) error {
+	return s.store.WithinTransaction(ctx, operation)
 }
 
 type MemoryStore struct {
@@ -201,6 +205,9 @@ func (s *MemoryStore) CompleteReplay(_ context.Context, org, key string, r Repla
 	}
 	s.replays[storageKey] = r
 	return nil
+}
+func (s *MemoryStore) WithinTransaction(ctx context.Context, operation func(context.Context) error) error {
+	return operation(ctx)
 }
 
 func newID(prefix string) string {

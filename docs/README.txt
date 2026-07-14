@@ -93,8 +93,8 @@ API Principles
   new major path such as /v2.
 - Deprecations remain available for at least 12 months, with migration guidance.
 - Every request receives X-Request-Id. Errors use one stable JSON envelope.
-- Mutating requests accept Idempotency-Key, so safe client retries never create
-  duplicate resources.
+- Mutating requests accept Idempotency-Key. PostgreSQL commits a resource
+  mutation and its replay response in the same transaction.
 - List endpoints use cursor pagination from their first release.
 - Every authenticated request is organization-scoped. IDs are never authorized
   without checking their workspace and organization ownership.
@@ -230,6 +230,11 @@ Validate
 cd api
 GOCACHE=/tmp/axon-go-build go test ./...
 GOCACHE=/tmp/axon-go-build go vet ./...
+
+PostgreSQL integration tests are opt-in and require a disposable database:
+
+cd api
+AXON_TEST_DATABASE_URL=postgres://axon:axon@127.0.0.1:5432/axon_test?sslmode=disable go test ./internal/postgres
 
 The Decision Filter
 
