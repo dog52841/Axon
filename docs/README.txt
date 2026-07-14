@@ -177,7 +177,10 @@ Phase 1 — Reliable API platform (now)
 Phase 2 — BYOK execution
 
 - Unified Provider API for chat, streaming, tool calls, and embeddings.
-- Start with OpenAI-compatible, Anthropic, and Ollama adapters.
+- An internal OpenAI-compatible chat adapter supports bearer authentication,
+  tool calls, usage normalization, and request correlation. It is not exposed
+  until provider registration and encrypted secrets exist.
+- Add Anthropic and Ollama adapters through the same provider contract.
 - Encrypted provider credentials; no credentials in logs.
 
 Phase 3 — Durable runtime
