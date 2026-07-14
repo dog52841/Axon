@@ -16,6 +16,7 @@ import (
 var ErrUnauthorized = errors.New("unauthorized")
 var ErrNotFound = errors.New("resource not found")
 var ErrIdempotencyConflict = errors.New("idempotency key reused with a different request")
+var ErrIdempotencyInProgress = errors.New("idempotency request is in progress")
 
 type Organization struct {
 	ID        string    `json:"id"`
@@ -43,8 +44,8 @@ type Store interface {
 	CreateWorkspace(context.Context, Workspace) error
 	GetWorkspace(context.Context, string) (Workspace, error)
 	ListWorkspaces(context.Context, string, int, string) ([]Workspace, string, error)
-	GetReplay(context.Context, string, string) (Replay, bool, error)
-	PutReplay(context.Context, string, string, Replay) error
+	ClaimReplay(context.Context, string, string, string) (Replay, bool, error)
+	CompleteReplay(context.Context, string, string, Replay) error
 }
 
 type Service struct{ store Store }
@@ -90,18 +91,11 @@ func (s *Service) Workspace(ctx context.Context, id, organizationID string) (Wor
 func (s *Service) ListWorkspaces(ctx context.Context, org string, limit int, cursor string) ([]Workspace, string, error) {
 	return s.store.ListWorkspaces(ctx, org, limit, cursor)
 }
-func (s *Service) Replay(ctx context.Context, org, key, fingerprint string) (Replay, bool, error) {
-	replay, ok, err := s.store.GetReplay(ctx, org, key)
-	if err != nil || !ok {
-		return Replay{}, ok, err
-	}
-	if replay.Fingerprint != fingerprint {
-		return Replay{}, false, ErrIdempotencyConflict
-	}
-	return replay, true, nil
+func (s *Service) ClaimReplay(ctx context.Context, org, key, fingerprint string) (Replay, bool, error) {
+	return s.store.ClaimReplay(ctx, org, key, fingerprint)
 }
 func (s *Service) StoreReplay(ctx context.Context, org, key, fingerprint string, status int, body []byte, contentType string) error {
-	return s.store.PutReplay(ctx, org, key, Replay{Fingerprint: fingerprint, Status: status, Body: body, ContentType: contentType})
+	return s.store.CompleteReplay(ctx, org, key, Replay{Fingerprint: fingerprint, Status: status, Body: body, ContentType: contentType})
 }
 
 type MemoryStore struct {
@@ -180,16 +174,32 @@ func (s *MemoryStore) ListWorkspaces(_ context.Context, org string, limit int, c
 	}
 	return all[start:end], next, nil
 }
-func (s *MemoryStore) GetReplay(_ context.Context, org, key string) (Replay, bool, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	r, ok := s.replays[org+":"+key]
-	return r, ok, nil
-}
-func (s *MemoryStore) PutReplay(_ context.Context, org, key string, r Replay) error {
+func (s *MemoryStore) ClaimReplay(_ context.Context, org, key, fingerprint string) (Replay, bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.replays[org+":"+key] = r
+	storageKey := org + ":" + key
+	replay, ok := s.replays[storageKey]
+	if !ok {
+		s.replays[storageKey] = Replay{Fingerprint: fingerprint}
+		return Replay{}, false, nil
+	}
+	if replay.Fingerprint != fingerprint {
+		return Replay{}, false, ErrIdempotencyConflict
+	}
+	if replay.Status == 0 {
+		return Replay{}, false, ErrIdempotencyInProgress
+	}
+	return replay, true, nil
+}
+func (s *MemoryStore) CompleteReplay(_ context.Context, org, key string, r Replay) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	storageKey := org + ":" + key
+	claimed, ok := s.replays[storageKey]
+	if !ok || claimed.Fingerprint != r.Fingerprint {
+		return ErrNotFound
+	}
+	s.replays[storageKey] = r
 	return nil
 }
 
@@ -205,3 +215,8 @@ func newAPIKey() (string, string) {
 	return raw, hashKey(raw)
 }
 func hashKey(raw string) string { sum := sha256.Sum256([]byte(raw)); return hex.EncodeToString(sum[:]) }
+
+// HashAPIKey returns the database representation of an AXON API key.
+// API keys are high-entropy random values, so a deterministic hash permits
+// lookup without retaining the plaintext credential.
+func HashAPIKey(raw string) string { return hashKey(raw) }

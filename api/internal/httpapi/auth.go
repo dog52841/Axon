@@ -54,9 +54,14 @@ func idempotent(service *platform.Service, next http.HandlerFunc) http.HandlerFu
 		r.Body = io.NopCloser(bytes.NewReader(body))
 		fingerprint := fingerprint(r.Method, r.URL.Path, body)
 		principal := principalFrom(r.Context())
-		replay, found, err := service.Replay(r.Context(), principal.OrganizationID, key, fingerprint)
+		replay, found, err := service.ClaimReplay(r.Context(), principal.OrganizationID, key, fingerprint)
 		if err == platform.ErrIdempotencyConflict {
 			writeError(w, http.StatusConflict, "idempotency_error", "idempotency_key_in_use", "Idempotency-Key was already used with a different request")
+			return
+		}
+		if err == platform.ErrIdempotencyInProgress {
+			w.Header().Set("Retry-After", "1")
+			writeError(w, http.StatusConflict, "idempotency_error", "idempotency_in_progress", "An identical request is still in progress; retry shortly")
 			return
 		}
 		if err != nil {

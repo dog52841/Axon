@@ -12,13 +12,27 @@ import (
 	"github.com/axon/api/internal/agent"
 	"github.com/axon/api/internal/httpapi"
 	"github.com/axon/api/internal/platform"
+	store "github.com/axon/api/internal/postgres"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
 	logger := log.New(os.Stdout, "axon-api ", log.LstdFlags|log.LUTC)
-	store := agent.NewMemoryStore()
-	service := agent.NewService(store)
-	platformService := platform.NewService(platform.NewMemoryStore())
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL == "" {
+		logger.Fatal("DATABASE_URL is required")
+	}
+	pool, err := pgxpool.New(context.Background(), databaseURL)
+	if err != nil {
+		logger.Fatalf("open database pool: %v", err)
+	}
+	defer pool.Close()
+	if err := pool.Ping(context.Background()); err != nil {
+		logger.Fatalf("connect database: %v", err)
+	}
+	persistence := store.NewStore(pool)
+	service := agent.NewService(persistence)
+	platformService := platform.NewService(persistence)
 	address := os.Getenv("AXON_API_ADDR")
 	if address == "" {
 		address = "127.0.0.1:4318"
