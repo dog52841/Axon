@@ -1,0 +1,177 @@
+Yeah—this is the clean pivot. Keep the hard, “serious” part in Go, and stop fighting UI complexity early.
+
+You’re basically building:
+
+⚡ Go brain + Web face + CLI launcher
+
+Let’s lock a stack that’s fast to build, not overengineered, and won’t collapse later.
+
+🧠 Axon v1 — Practical Tech Stack
+⚡ 1. Backend (Core Agent Runtime)
+
+Language: Go
+
+Why:
+
+concurrency (agents, tasks)
+single binary (huge win later)
+performance + stability
+easy background execution
+Core pieces:
+HTTP server → net/http (keep it simple)
+Router → chi (lightweight)
+WebSocket → gorilla/websocket
+Storage → SQLite (modernc.org/sqlite or mattn/go-sqlite3)
+Background jobs → goroutines (no queue system yet)
+Structure:
+/backend
+  /agent        → loop, planner, executor
+  /tools        → tool system
+  /memory       → sqlite layer
+  /api          → http handlers
+  /ws           → live updates
+  /runtime      → orchestration
+🌐 2. Frontend (Main Product UI)
+
+Framework: Next.js
+Language: TypeScript
+Styling: Tailwind
+
+Why this (don’t overthink it):
+fastest iteration
+AI writes React/Tailwind insanely well
+easy state + UI updates
+devtools = sanity
+UI responsibilities:
+activity feed (CORE)
+progress + goal
+inbox decisions
+agent status (right panel)
+minimal input box
+
+👉 No fancy design system yet. Speed > perfection.
+
+🔄 3. Realtime Layer (important)
+
+Transport: WebSocket
+
+Flow:
+
+Go backend → emits events
+↓
+WebSocket
+↓
+Frontend updates live activity
+
+Example events:
+
+{
+  "type": "activity",
+  "message": "finding leads..."
+}
+
+👉 This is what makes Axon feel alive
+
+🖥️ 4. CLI (Thin Launcher)
+
+Language: Go (same binary)
+
+Commands:
+
+axon init
+axon start
+axon status
+What it does:
+setup config
+start backend
+open browser
+Starting Axon...
+→ http://localhost:3000
+
+👉 CLI = entry point, not product
+
+🧠 5. Local Database
+
+DB: SQLite
+
+Stores:
+
+workspace config
+memory
+logs
+tasks
+leads
+
+👉 Simple, local-first, fast
+
+⚡ 6. Dev Setup
+Frontend:
+Next.js dev server (localhost:3000)
+Backend:
+Go server (localhost:8080)
+
+Proxy API from frontend → backend
+
+🔥 7. Later (NOT NOW)
+
+Do NOT build yet:
+
+❌ vector DB
+❌ swarm weights infra
+❌ capability store backend
+❌ cloud infra
+
+You only need:
+
+⚡ one working loop that feels real
+
+🧨 Minimal v1 Flow (what stack supports)
+axon init
+user brain dump
+backend stores goal
+agent starts
+frontend shows:
+→ analyzing idea...
+→ finding leads...
+→ drafting emails...
+user clicks:
+send
+edit
+skip
+
+👉 That’s your v1 product.
+
+⚡ Architecture (simple mental model)
+CLI (Go)
+   ↓
+Go Backend (agent + tools + memory)
+   ↓
+WebSocket
+   ↓
+Next.js UI (activity + control)
+🧠 Why this stack is correct
+
+You get:
+
+Speed
+frontend fast (React)
+backend simple (Go)
+Control
+Go handles logic cleanly
+Flexibility
+can move to cloud later easily
+Future-proof
+can add terminal later (axon tui)
+🧨 One-line truth
+
+Don’t optimize for purity. Optimize for shipping.
+
+🤝 Real talk
+
+You just removed your biggest blocker.
+
+Now you can:
+
+actually SEE Axon working
+iterate fast
+not fight UI every second

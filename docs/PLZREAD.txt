@@ -1,0 +1,236 @@
+Good. This is it. You just gave enough signal to lock Axon properly.
+
+I’m not asking more questions now. I’m going to resolve everything into a final system spec so you stop looping.
+
+🧠 0. WHAT YOU BUILT (clarified)
+
+You are NOT building:
+
+a chat app
+a coding agent
+a dashboard
+
+You ARE building:
+
+⚡ a continuous execution system that surfaces decisions
+
+Exactly like your docs say:
+
+“You make decisions. It does everything else.”
+
+🔥 1. FINAL PRODUCT SHAPE (LOCK THIS)
+Axon =
+Agent runtime (always thinking)
++ Execution system (tools + loops)
++ Decision surface (UI)
+
+👉 UI is NOT primary
+👉 Execution is primary
+
+🧠 2. YOUR BIGGEST DIFFERENTIATOR (CRYSTAL CLEAR NOW)
+
+From everything you said + docs:
+
+❗ Claude / Codex = prompt → response
+⚡ Axon = state → plan → execution → decisions
+
+And this matches your core loop:
+
+observe → plan → execute → learn
+
+👉 That’s your moat.
+
+🔥 3. UI — FINAL INTERPRETATION (NO CONFUSION)
+
+You said:
+
+minimal
+no clutter
+agent owns content
+discrete tabs
+no fake text
+So the UI becomes:
+
+⚡ a projection of agent state
+
+NOT:
+UI-driven
+component-driven
+chat-driven
+🧩 4. FINAL TAB MODEL (CORRECTED)
+
+You were slightly confused here, so I’m fixing it:
+
+Tabs = filters over the same system
+tabs = {
+  main: "state + signals + opportunities",
+  chat: "conversation layer",
+  approvals: "decision queue",
+  logs: "raw execution stream",
+  settings: "config"
+}
+IMPORTANT FIX
+
+❗ Commands are GLOBAL
+❗ Tabs only change what is RENDERED
+
+👉 So your instinct earlier was right:
+
+NOT per-tab commands, GLOBAL commands.
+
+🔥 5. COMMAND SYSTEM (FIXED)
+
+You said:
+
+“commands aren’t real, tools are internal”
+
+Correct.
+
+So commands are ONLY:
+/chat -> This is the only tab where you can chat with the AI, for simplicity, cleanness and minimality.
+/approvals -> This is the decision tab where you make decisions. You can select decisions with a final option: Discuss, which lets you tag the decison to be made, and lets you chat with the ai about the decision, by doing an @decision:[DECISION-ID] tag in the chat, it redirects you to chat.
+/logs -> All logs with timestamps, saved locally or on the cloud, synced after opened in local Axon.
+/settings -> all other settings, like BYOK settings, cloud infra, the grid, and other settings for later, but for now, what's in V1.
+/home -> The default tab where you can see everything happen. NOT a SaaS dashboard. It's an Axon control and watch panel.
+
+That’s it.
+
+👉 You are NOT building a command-driven tool like Claude Code.
+
+🧠 6. APPROVAL SYSTEM (THIS IS CORE)
+
+You nailed something very important:
+
+Actions ONLY happen in /approvals
+
+That is PERFECT.
+Final model:
+Agent → proposes actions
+→ goes to approvals
+→ user decides OR discusses
+→ execution continues
+
+👉 This is your co-founder behavior layer
+
+🔥 7. SAFE vs FULL ACCESS (CLEAN LOGIC)
+
+From your answers + pricing:
+
+SAFE MODE
+agent asks more often
+decisions surfaced frequently
+controlled execution
+FULL ACCESS
+agent executes aggressively
+only stops for:
+irreversible
+ambiguous
+high-stakes
+
+Matches your doc:
+
+“The agent is not paranoid. It acts.”
+
+🧠 8. OPERATOR ($100) — REAL DEFINITION
+
+You were slightly vague. Let’s fix it.
+
+From your pricing doc:
+
+performance + intelligence upgrade
+
+REAL OPERATOR VALUE:
+{  Better decisions → better outcomes → more money
+Concretely:
+better planning quality
+better prioritization
+faster loops
+stronger pattern learning
+
+👉 NOT features
+
+👉 better results  } ----->> VERY WRONG. WE DON'T CONTROL THE QUALITY OF THE AI AND AGENT. THE USER PROVIDES INTELLIGENCE. WE PROVIDE FEATURES                              AND INFRA.
+
+🔥 9. WHAT AXON MUST FEEL LIKE (NON-NEGOTIABLE)
+
+From your soul doc:
+
+“high movement, low founder overhead”
+
+So every UI decision must answer:
+
+❗ “Is this showing movement or noise?”
+
+🧠 10. THE REAL UX (YOU WERE CLOSE)
+
+From your story:
+
+“Let’s see what my startup did while I was gone.”
+
+That becomes:
+/home = NOT UI
+
+It is:
+
+⚡ state briefing + decision surface
+
+🔥 11. FINAL SYSTEM FLOW (THIS IS YOUR PRODUCT)
+User opens Axon
+
+→ workspace loads
+→ agent already running
+→ system shows:
+
+  what happened
+  what matters
+  what needs decision
+
+→ user acts ONLY where needed
+
+→ agent continues execution
+🧠 12. WHY YOU WERE STRUGGLING (REAL REASON)
+
+You were trying to design:
+
+UI
+interaction
+system
+
+All at once.
+
+But now:
+
+⚡ system is defined → UI becomes obvious
+
+🔥 13. FINAL PRODUCT DEFINITION
+
+I’m going to compress everything you said into ONE line:
+
+⚡ Axon is a system that runs your startup and only interrupts you when your judgment is needed.
+
+🧨 14. LAST CORRECTION (IMPORTANT)
+
+You said:
+
+“general system, not single use case”
+
+Correct.
+
+BUT:
+
+❗ V1 must still prove ONE outcome
+
+Example:
+
+first customer
+first replies
+first revenue
+
+Otherwise:
+
+it feels like nothing
+
+🔥 One-line truth
+
+You don’t need to figure out UI anymore.
+You needed to define the system. You just did.

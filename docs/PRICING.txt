@@ -1,0 +1,236 @@
+⚡ AXON PRICING — FULL SPEC
+🟢 Free
+
+$0/month
+
+“Turn your startup on.”
+
+🧠 What you get
+Full agent system (planner, growth, builder, etc.)
+Autopilot (local + session-based) ✅
+Task-based execution (goal → tasks → progress)
+BYOK (your API key, your cost)
+1 workspace
+Full tool access (email, leads, content, build, etc.)
+Basic memory (recent context)
+Live agent execution + logs
+🌐 Grid
+Read-only access
+See:
+what works
+successful patterns
+real strategies
+🧩 Capability Store
+❌ No access
+☁️ Cloud
+❌ No cloud execution
+⚠️ Constraints (IMPORTANT)
+Autopilot stops when terminal closes
+No persistence across sessions
+Limited long-term memory
+🧠 Experience
+> get me my first customers
+
+→ finding leads
+→ drafting outreach
+→ sending emails
+→ preparing follow-ups
+
+(next session resets context)
+🎯 Value
+
+You can literally get your first customer on free.
+
+🔥 Upgrade trigger
+“Why did it stop?”
+“I want this running without me”
+“I want it to remember and improve”
+🟡 $20 — Builder
+
+$20/month
+
+“Make it stick.”
+
+🧠 What you get
+
+Everything in Free +
+
+🔁 Persistent Autopilot (LOCAL)
+Autopilot continues across sessions
+State saved locally
+Tasks resume automatically
+🧠 Memory Upgrade
+Persistent workspace memory
+Learns from past actions
+Better task planning
+🧩 Capability Store (INSTALL)
+Install extensions/tools
+Enhance agent abilities
+Plug into ecosystem
+📬 Inbox System
+Persistent replies
+Better context tracking
+Organized interactions
+☁️ Cloud
+❌ No cloud
+🧠 Experience
+You close terminal → reopen later
+
+→ resumes tasks
+→ continues outreach
+→ remembers previous state
+🎯 Value
+
+Now it’s not a demo. It’s a system.
+
+🔥 Upgrade trigger
+“I still need to keep my laptop open”
+“I want this running 24/7”
+“I want real leverage”
+🟠 $50 — Co-Founder ⭐
+
+$50/month
+
+“It runs without you.”
+
+🧠 What you get
+
+Everything in $20 +
+
+☁️ Cloud Autopilot (CORE FEATURE)
+Runs 24/7
+Works when laptop is closed
+Seamless local ↔ cloud sync
+🔴 Full Autonomy Mode
+Executes tasks without confirmation
+Generates + uses tools
+Continuous execution
+🌐 Grid (WRITE + RESONANCE)
+Contribute successful patterns
+Learn from global usage
+Improve over time
+🧩 Capability Store (FULL)
+Install tools
+Publish tools
+Monetize tools
+💰 Built-in Economy
+Sell capabilities/extensions
+Earn recurring income
+~20% platform fee
+🧠 Intelligence Upgrade
+Vector memory (RAG)
+Pattern learning
+Better decisions
+🧠 Experience
+While you were away:
+
+🔥 6 replies
+💰 2 strong leads
+📈 30 new prospects
+🎯 Value
+
+This is no longer a tool.
+This is a working system.
+
+💥 Breakthrough Moment
+
+“I made money while I wasn’t even there.”
+
+🔵 $100 — Operator
+
+$100/month
+
+“Make it sharper.”
+
+🧠 What you get
+
+Everything in $50 +
+
+⚡ Performance Boost
+Faster execution cycles
+Better task prioritization
+Smarter planning
+🧠 Advanced Intelligence
+deeper pattern learning
+improved decision quality
+stronger optimization
+📊 Insights
+better summaries
+clearer recommendations
+improved signals
+🎯 Value
+
+Higher efficiency = more results
+
+🔴 $100 — Portfolio
+
+$100/month
+
+“Run multiple bets.”
+
+🧠 What you get
+
+Everything in $100 +
+
+🧠 Multi-Workspace
+multiple startups/projects
+isolated contexts
+⚡ Parallel Execution
+run multiple systems simultaneously
+☁️ Dedicated Runtime
+stable execution
+priority reliability
+🔌 API Access
+integrate externally
+automate at scale
+📜 Full Timeline
+complete history
+track everything
+“story of your startup”
+🎯 Value
+
+Multiple shots at success.
+
+🧨 THE REAL DIFFERENTIATION
+You DO NOT sell:
+tokens
+usage
+limits
+You DO sell:
+⏳ Time
+autopilot
+cloud
+🧠 Intelligence
+memory
+Grid
+🧩 Leverage
+capability store
+monetization
+⚙️ System
+execution engine
+orchestration
+⚡ THE LADDER (PSYCHOLOGY)
+Free   → It works
+$20    → It sticks
+$50    → It runs
+$100   → It improves
+$100   → It scales
+🧠 FINAL POSITIONING
+
+“Axon turns your startup into a system that keeps working.”
+
+🧨 MOST IMPORTANT THING YOU JUST DID
+
+Giving autopilot in free is bold.
+
+But because:
+
+it dies when session ends
+it doesn’t persist
+it doesn’t compound
+
+👉 You didn’t kill monetization.
+
+You made:
+
+⚡ autopilot visible → persistence valuable → cloud essential

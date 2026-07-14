@@ -1,0 +1,998 @@
+Axon
+Full Feature Specification
+The Complete Picture — Everything That Would Give ChatGPT A Heart Attack
+
+The One Sentence
+"Run your startup. Not your AI."
+Your company runs. You make decisions. That's the whole product.
+
+Onboarding — The Brain Dump
+No forms. No wizards. No dropdowns. No "select your industry."
+You run one command:
+bashnpx axon@latest init
+```
+
+You get one prompt:
+```
+Hey. Just talk to me.
+What's keeping you up at night?
+
+>
+```
+
+You talk. Freely. Messily. Stream of consciousness. Five minutes of everything — the idea, the failed attempts, the money you've spent, the thing you actually want, the goal that's embarrassing to say out loud.
+
+The AI reads all of it. Actually reads it. Not a parser. Not keyword matching. The LLM processes your specific words and reflects back what it actually heard:
+```
+Reading...
+
+Okay. Here's what I actually heard.
+
+You're not stuck on the idea. The idea is fine.
+You're stuck on the part where you find out
+if it's real — because you've been here before
+and it didn't work and you can't afford another
+one that doesn't work.
+
+That's a distribution problem, not a product problem.
+
+I'm not going to let you build yet.
+First we find out if people will pay.
+5 days. No code required.
+
+Setting you up now.
+
+  Workspace: Cold Email OS
+  Region: India / INR / Razorpay
+  Agents: planner on Sonnet, growth on Kimi, closer on Sonnet
+  Tools: lead.find, email.send, content.post, razorpay.link
+  First loop: lead_loop
+  First move: validate before building
+
+Does that sound right?
+Enter to start. Type anything to change something.
+```
+
+Everything inferred from the brain dump. Workspace name. Region. Currency. Payment processor. Tools. Loops. First move. Nobody asked about stage or integrations or ICP. The AI figured it out from what you said.
+
+If you type a correction it adjusts conversationally. One round. Then it builds the workspace and launches.
+
+**Minimum brain dump:** 50 words or 3 lines. Below that it pushes back: *"That's not enough. Keep going."*
+
+**If no API key:** flow still works. Dumber fallback parser. Told explicitly: *"Running without a brain. Paste a key in workspace.yaml to unlock real thinking."*
+
+**Time to running:** under 3 minutes from cold install to first loop queued.
+
+---
+
+## The Agent System
+
+Five specialized agents running simultaneously. Each with its own model config, tool access, personality profile, and resource limits. Shared memory. Independent execution.
+```
+PLANNER    Strategic planning, goal alignment, loop orchestration
+           Model: claude-sonnet — needs full reasoning
+           Runs: every 30 minutes
+           Tools: all (read-only)
+
+GROWTH     Content generation, posting, audience building
+           Model: kimi-k2 — cheap, fast, high volume
+           Runs: continuous (loops)
+           Tools: content.generate, content.post, lead.find
+
+CLOSER     Outreach, follow-up, relationship management
+           Model: claude-sonnet
+           Runs: continuous (loops)
+           Tools: email.send, email.reply, stripe.invoice
+
+BUILDER    Code generation, UI building, product iteration
+           Model: claude-opus — quality matters here
+           Runs: on-demand
+           Tools: code.generate, ui.build, ui.judge, deploy.*
+
+WATCHER    Competitor intel, market signals, pivot detection
+           Model: claude-haiku — lightweight, always on
+           Runs: continuous (background)
+           Tools: web.scrape, web.search, insight.analyze
+
+The Core Agent Loop
+typescriptwhile (running) {
+  const state  = await observer.observe(workspace, memory)
+  const plan   = await planner.plan(state, goal, tools)
+
+  for (const action of plan.actions) {
+    if (needsConfirmation(action) && safeMode) {
+      await requestConfirmation(action)
+    } else {
+      await executor.execute(action)  // just does it
+    }
+    await memory.log(action, result)
+  }
+
+  await learner.learn(results, memory)
+  await sleep(interval)
+}
+The planner receives: full workspace state, memory context, learned patterns, available tools, limits, mode. It outputs a prioritized action plan with reasoning. Decisive. No hedging. No "you might want to consider."
+What "irreversible" means in practice:
+ActionReversibleConfirm in Safe ModeConfirm in Full AccessSend emailSoftNoNoPost contentSoftFirst time onlyNoGenerate codeYesNoNoDeploy to VercelYes (rollback)NoNoCreate invoiceSoftYesNoCharge customerHardAlwaysAlwaysDelete databaseNoAlwaysAlwaysPush to mainHardYesNo
+The agent is not paranoid. It acts. It only stops for things that genuinely cannot be undone.
+
+YOLO / Full Access Mode
+bashaxon yolo
+```
+```
+⚠️  Full Access Mode
+
+You're about to give Axon unrestricted execution access.
+
+This means:
+  • No confirmation prompts for most actions
+  • Agent sends emails, posts content, writes and runs code
+  • Agent generates and installs its own tools
+  • Agent executes loops continuously without interruption
+  • You are responsible for what it does
+
+Truly dangerous actions — deleting databases, billing without
+approval — still require explicit unlock per-action in config.
+
+Type ENABLE to confirm:
+> ENABLE
+
+Full Access Mode: ON 🔴
+After this it just runs. No hand-holding. No "are you sure you want to send this email." No robots.
+Disable anytime:
+bashaxon safe
+```
+
+---
+
+## Tool System
+
+Every action the agent takes is a tool. Modular. Versioned. Composable.
+
+### Built-in Tools
+
+**Email**
+- `email.send` — SMTP / Gmail outreach, 50/day default
+- `email.reply` — thread-aware replies
+- `email.draft` — draft without sending
+- `email.analyze` — reply sentiment and intent
+- `email.sequence` — multi-step sequences
+
+**Content**
+- `content.generate` — tweets, posts, landing copy
+- `content.post` — post to X, LinkedIn
+- `content.schedule` — schedule future posts
+- `content.thread` — full Twitter thread from topic
+- `content.repurpose` — transform across formats
+
+**Lead**
+- `lead.find` — scraping + API discovery
+- `lead.qualify` — LLM-based ICP scoring
+- `lead.enrich` — add contact info
+- `lead.maps` — Google Maps local business discovery
+- `lead.track` — pipeline stage tracking
+
+**Code + Build**
+- `code.generate` — write files from spec
+- `code.run` — execute in sandbox
+- `code.test` — run test suite, auto-fix failures
+- `ui.build` — generate frontend from description or reference
+- `ui.judge` — screenshot + multi-dimensional quality evaluation
+- `ui.iterate` — improve based on judge feedback
+- `deploy.vercel` — deploy to Vercel
+- `deploy.railway` — deploy backend
+
+**Payments — Regional**
+- `stripe.invoice` — US, EU, UK, AU, CA
+- `razorpay.invoice` — India
+- `razorpay.link` — UPI payment links
+- `paystack.invoice` — Nigeria, Ghana, Kenya, South Africa
+- `flutterwave.invoice` — West Africa, Egypt
+- `xendit.invoice` — Indonesia, Philippines, Malaysia
+- `mercadopago.invoice` — Brazil, Mexico, Argentina
+- `paymongo.invoice` — Philippines
+- `iyzico.invoice` — Turkey
+- `upi.link` — India direct UPI
+
+**Intelligence**
+- `insight.analyze` — metrics pattern surface
+- `insight.competitor` — competitor research
+- `insight.market` — market size and trends
+- `insight.churn` — predict churn from behavior
+- `insight.pricing` — data-based pricing recommendations
+- `web.search` — live web search
+- `web.scrape` — structured data extraction
+- `web.fetch` — full page retrieval
+
+### Agent-Generated Tools
+
+When the agent hits a capability gap it generates, registers, and uses new tools autonomously. Full Access mode only.
+```
+[planner]: I need to scrape Google Maps for dental leads in Chennai.
+[planner]: No tool exists for this. Generating: maps.dental_scraper
+[tool_generator]: Writing implementation...
+[tool_generator]: Tool created. Registering. Marking experimental.
+[executor]: Executing maps.dental_scraper...
+[executor]: Found 47 dental practices. Stored in leads.
+```
+
+Generated tools live in `~/.axon/tools/generated/`. Inspectable. Editable. Deletable. If they work well, submittable to the Grid Marketplace.
+
+---
+
+## Loop Engine
+
+Loops are the business logic layer. Repeatable workflows. The agent executes them on schedule or continuously.
+
+### Built-in Loops
+
+**Lead Loop**
+```
+find leads → qualify → enrich → draft email → send
+→ wait 3 days → follow up v1
+→ wait 7 days → follow up v2
+→ positive reply → notify founder
+```
+
+**Growth Loop**
+```
+analyze last 7 days content performance
+→ generate content informed by what worked
+→ post at optimal window (from Swarm Weights)
+→ track engagement
+→ update memory with performance
+```
+
+**Build Loop**
+```
+read spec
+→ generate code
+→ test (auto-fix up to 3 iterations)
+→ build UI
+→ judge UI quality (min score 7.5/10)
+→ iterate on failures
+→ deploy to preview
+→ notify founder: "preview ready, 2 things need your eyes"
+```
+
+**Competitor Intel Loop**
+```
+fetch competitor URLs daily
+→ extract: pricing, features, copy, job postings
+→ compare to previous snapshot
+→ flag changes
+→ include in morning briefing if significant
+```
+
+**Agency Sniper Loop (Full Access)**
+```
+find local businesses via Maps
+→ qualify by social media weakness
+→ enrich with decision maker contact
+→ draft personalized pitch
+→ send
+→ positive reply → draft proposal
+→ proposal accepted → create invoice
+Custom Loop Definition
+yamlname: agency_sniper
+trigger: continuous
+interval_hours: 12
+steps:
+  - tool: lead.maps
+    params:
+      query: ${workspace.target_query}
+      location: ${workspace.target_location}
+  - tool: lead.qualify
+    params:
+      min_score: 8
+  - tool: email.send
+    params:
+      template: personalized_pitch
+  - trigger: positive_reply
+    steps:
+      - tool: stripe.invoice
+        params:
+          amount: ${workspace.service_price}
+
+Memory System
+Layer 1 — Operational Memory (SQLite, always on)
+Complete audit trail. Every action. Every result. Every decision. Every metric at every point in time.
+sql-- Core tables
+actions    (id, tool, params, result, success, duration_ms, cost_usd, loop_id)
+metrics    (id, type, value, currency, source, recorded_at)
+decisions  (id, context, options, chosen, reasoning, outcome)
+learnings  (id, pattern, confidence, evidence, applied_count)
+customers  (id, name, email, source, mrr, joined_at, churned_at)
+leads      (id, name, company, email, score, source, status, notes)
+```
+
+### Layer 2 — Semantic Memory (LanceDB, v1.5, optional)
+
+Vector embeddings of past decisions, content, insights, and customer conversations. RAG over your entire company history. The agent queries: *"what worked last time we tried cold email for this segment?"* and gets relevant context automatically.
+
+### Layer 3 — Learned Patterns (extracted continuously)
+
+After every batch of actions, the Learner runs pattern extraction:
+```
+learned: tuesday emails → 23% higher open rate for this list
+learned: maps leads → 2.1x better conversion than scraped leads
+learned: price objections spike when leading with features
+learned: users skipping week 3 → 89% churn probability by day 47
+learned: 7-9pm IST content → 3.4x impressions baseline
+```
+
+These patterns are stored and automatically applied to future planning. Not generic advice. YOUR data. YOUR business. YOUR patterns.
+
+---
+
+## Background Cognition
+
+A lightweight process running 24/7 at near-zero cost. Not executing actions. Just watching. Connecting dots. Forming opinions.
+
+**Signal feeds:**
+- Stripe / payment API — revenue changes, churn events, upgrade patterns
+- Gmail — reply sentiment, objection patterns, unsubscribes
+- Twitter/X — engagement trends, mentions, niche signals
+- Competitor URLs — pricing changes, new features, copy updates, job postings
+- Hacker News / Reddit — mentions of your problem space
+- Your app (if connected) — user behavior, drop-off points
+- Lead database — response rates, pipeline velocity, source quality
+
+**Emergent Goal Formation**
+
+After 2-3 weeks of signal, the agent starts proposing goal updates:
+```
+Your original goal: 100 SMBs @ ₹999/mo = ₹99,900 MRR
+
+Observed:
+  → SMB conversion: 2.1%
+  → Agency conversion (not targeted): 8.7%
+  → All 4 agency conversions: organic Twitter replies
+
+New goal proposal:
+  Pivot to boutique agencies (5-15 person)
+  20 agencies @ ₹4,999/mo = ₹99,980 MRR
+  Same revenue. 80% less work.
+
+Run validation loop?
+[Accept] [Modify] [Ignore]
+Pivot Detection Engine
+Monitors for failure patterns before the founder consciously recognizes them:
+typescriptconst PIVOT_TRIGGERS = [
+  { condition: 'growth_rate_flat',    lookbackDays: 21 },
+  { condition: 'reply_rate_decline',  threshold: 0.5,  lookbackDays: 14 },
+  { condition: 'churn_rate_high',     threshold: 0.15, lookbackDays: 30 },
+  { condition: 'cac_doubling',        lookbackDays: 14 },
+  { condition: 'zero_organic_growth', lookbackDays: 30 },
+]
+When triggers fire: full analysis. Concrete executable pivot options. Not vague suggestions. Specific actions with estimated outcomes.
+
+UI Review System
+The agent builds, evaluates, and iterates on product UI without the founder touching code.
+How it works:
+
+Playwright takes screenshot of running app
+Vision model (GPT-4o) evaluates on 5 dimensions
+Technical issues fixed automatically
+Subjective decisions surfaced to founder (max 3)
+Founder answers in plain English
+Agent updates and deploys
+
+Five evaluation dimensions:
+DimensionMethodMin ScoreVisual hierarchyVision model7/10TrustVision + reasoning7/10ConversionReasoning with ICP persona7/10CraftVision model7/10MobilePlaywright mobile emulation7/10
+Design Reference Ingestion
+bashaxon design --from figma.com/file/abc123
+axon design --from screenshot.png
+axon design --describe "minimal dark like Vercel but warmer"
+Extracts design tokens. Generates UI matching the aesthetic. Diffs against reference. Iterates until delta is acceptable.
+The No-IDE Experience
+You never open VS Code. You never look at code. The loop is:
+
+Describe or show what you want
+Agent builds it
+Agent evaluates and fixes objective issues
+Agent shows preview with 2-3 questions
+You answer in plain English
+Agent updates and ships
+
+
+BYOK — Bring Your Own Key
+We charge for the platform. You pay your AI provider directly. We never mark up model costs. We never create artificial token limits.
+Supported providers:
+ProviderModelsBest ForCost ProfileAnthropicOpus, Sonnet, HaikuPlanning, building, closingMedium-HighOpenAIGPT-4o, GPT-4o mini, o1Vision (UI judge), reasoningMedium-HighGoogleGemini 2.0 Flash, ProVision, multilingualLow-MediumMoonshotKimi K2High-volume growth loopsVery LowMistralLarge, Small, NemoEuropean deploymentsLowGroqLlama 3.3Ultra-fast inferenceVery LowOllamaAny GGUF modelAir-gapped, free computeFreeTogether AI70B+ open modelsCost optimizationVery Low
+Per-agent model routing:
+yamlagents:
+  planner:   anthropic/claude-sonnet-4-6
+  builder:   anthropic/claude-opus-4-6
+  closer:    anthropic/claude-sonnet-4-6
+  growth:    moonshot/kimi-k2        # cheap, fast, sufficient
+  watcher:   anthropic/claude-haiku  # lightweight, always on
+  vision:    openai/gpt-4o           # best for UI review
+```
+
+Budget founders running Haiku + Kimi across most roles: **$8-15/mo in API costs** at normal autopilot usage.
+
+API keys stored in OS keychain. Never in config files. Never on our servers. Never logged.
+
+---
+
+## 24/7 Cloud Execution
+
+When the laptop closes, the agent keeps running.
+```
+LOCAL (controller):           CLOUD (executor):
+  workspace config              loop scheduling
+  tool definitions              tool execution
+  decision approvals            agent compute
+  primary memory                briefing generation
+                                push notifications
+                                memory sync replica
+
+SYNC:
+  Local → Cloud: config, tool updates, founder decisions
+  Cloud → Local: results, logs, memory entries
+  Protocol: WebSocket + SQLite sync
+
+FAILSAFE:
+  Cloud unreachable → queue locally, sync on reconnect
+  Local offline → cloud continues with last config
+  All results stored both locations
+```
+
+A 14-year-old in class in Chennai. A founder at their day job in Lagos. A parent during school pickup in Jakarta. Their companies are running. The agent is finding leads, sending emails, posting content, watching competitors. They'll see a summary at 8pm.
+
+That's the product.
+
+---
+
+## The Morning Briefing
+
+Every morning at 8am local time. Midday pulse optional. Evening summary optional.
+
+Maximum 3 decisions. Always 3. Never more. More than 3 creates decision fatigue and reduces action rates.
+```
+Good morning. Day 23.
+
+Revenue: ₹22,400 MRR (+₹1,200 from yesterday)
+Customers: 18 paying (1 new overnight)
+
+What happened overnight:
+  · Lead loop sent 9 emails. 2 opened. 1 replied.
+  · Growth loop posted at 9pm. 847 impressions.
+  · Watcher: competitor dropped pricing 15%.
+    I've drafted a response strategy.
+
+Needs you today (3 decisions):
+  [1] Rohit replied positively. Book call or send Loom?
+  [2] Landing page B converting 34% better. Ship it?
+  [3] Raise daily email limit from 50 to 75?
+
+I'll handle everything else.
+```
+
+You make 3 decisions in 90 seconds.
+
+Your company ran all night.
+
+---
+
+## The TUI Dashboard
+
+Built with Ink (React for terminals). Three-column layout.
+```
+AXON  ·  Cold Email OS  ·  early_revenue          SAFE  ·  day 23
+─────────────────────────────────────────────────────────────────────
+                              │                  │
+   MAIN (60%)                 │  STATUS (20%)    │  LOG (20%)
+                              │                  │
+   [Chat / Inbox / Detail]    │  Runtime RUNNING  │  17:34 planner
+                              │  Observer idle    │  Planning cycle 4
+   axon  ·  17:34             │  Planner active   │
+   Found 23 leads via Maps.   │  Executor active  │  17:34 executor
+   11 qualified. Drafting     │  Learner idle     │  email.send done
+   outreach now.              │                   │
+                              │  MRR    ₹22,400   │  17:35 system
+   ──────────────────────     │  Day    23        │  Stage: growth
+                              │  Mode   SAFE      │
+   axon  ·  17:35             │                   │
+   Approve this subject line: │  Grid   local     │
+   "Noticed your clinic       │  Rank   #4        │
+    doesn't have online       │  Trust  67        │
+    booking"                  │                   │
+                              │                   │
+   [a] approve  [e] edit      │                   │
+   ──────────────────────     │                   │
+   >  _                       │                   │
+─────────────────────────────────────────────────────────────────────
+  [/] command   [n] inbox · 3   [tab] panels   [q] quit        chat
+```
+
+**Three views:**
+
+*Chat (default)* — agent messages, decisions, founder responses. Slash commands: `/loops`, `/tools`, `/memory`, `/grid`, `/yolo`, `/status`
+
+*Inbox (n key)* — notifications from the agent. Styled like email. Unread dot. Actions: read, delete, reply in chat.
+
+*Detail (enter on notification)* — full notification body. Inline decisions `[1/2/3]`. Reply context quotes into chat.
+
+---
+
+## Slash Commands
+
+Type `/` in chat. Command palette appears above input. Arrow keys navigate. Enter executes. Escape dismisses.
+```
+/loops    manage active loops — pause, resume, run now
+/tools    browse tools — list, install, run manually
+/memory   search agent memory — natural language query
+/grid     grid status, swarm weights, leaderboard
+/yolo     toggle full access mode
+/status   full metrics snapshot
+/intent   set new goal in plain English
+/replay   replay a past action with different params
+/focus    focus mode — silent agent for N hours
+
+Intent Syntax
+No YAML. No config files. No loop definitions.
+bashaxon intent "I need 5 customers this month"
+axon intent "my churn is too high"
+axon intent "launch this feature by friday"
+axon intent "I have ₹2,000 left this month, make it count"
+axon intent "stop posting on weekends, nobody's online"
+axon intent "our emails are too formal, sound more like me"
+```
+
+Each one maps to: goal update → strategy → loop reconfiguration → execution. The agent interprets and confirms. You never touch a settings page.
+
+---
+
+## Handoff Protocol
+
+When the agent hits genuine ambiguity — not danger, just uncertainty — it queues the decision and keeps running everything else:
+```
+[agent paused on 1 decision — everything else running]
+
+Priya replied: "interested but too expensive"
+
+Options I can take:
+  [A] Send 10% discount, expires 48h
+  [B] Send case study + value email
+  [C] Offer a call
+  [D] Custom reply
+
+Waiting for your tap. Will handle in background.
+The agent doesn't stop. It doesn't guess wrong. It surfaces the decision and keeps working on everything else.
+
+Replay System
+Every action logged with full context. You can replay any situation with different instructions:
+bashaxon replay --loop lead_loop --date yesterday
+axon replay --action email.send --id abc123 --tweak "be more casual"
+A/B test your agent's behavior retroactively. No other tool has this. Founders obsess over conversion rates — give them a time machine for their agent's decisions.
+
+Focus Mode
+bashaxon focus --hours 4
+```
+
+For the next 4 hours:
+- Agent handles everything autonomously
+- Zero notifications
+- No interruptions
+- Clean summary when you resurface
+
+Attacks the anxiety loop that kills founders. You stop wondering "is the outreach running, did that deploy go through, did anyone reply?" You just work. The summary is waiting when you come up for air.
+
+---
+
+## Startup State Machine
+
+FounderOS knows what stage you're in and auto-reconfigures:
+```
+State: Pre-Launch
+  Active: build_loop, waitlist_loop, content_loop
+  Focus: 70% build, 20% content, 10% research
+
+→ [first paying customer detected]
+
+State: Early Revenue
+  Active: lead_loop, outreach_loop, iterate_loop
+  Focus: 40% sales, 40% build, 20% content
+
+→ [MRR crosses threshold]
+
+State: Growth
+  Active: all loops
+  Focus: 30% sales, 30% product, 40% marketing
+No manual reconfiguration. The system evolves with your company. Pays attention to what you actually achieve, not just what you set as a goal.
+
+THE GRID
+What It Is
+The collective intelligence of every founder running Axon. Anonymized. Aggregated. Fed back to every agent daily.
+Not a social network. Not a dashboard. Not a forum.
+Infrastructure.
+Swarm Weights
+Every agent sends anonymized performance signals daily:
+typescript{
+  region: "IN",
+  stage: "early_revenue",
+  icp_type: "smb_b2b",
+  signals: [
+    {
+      tool: "email.send",
+      subject_format: "question",
+      open_rate: 0.31,
+      reply_rate: 0.09,
+      sample_size: 47
+    },
+    {
+      loop: "lead_loop",
+      source: "google_maps",
+      conversion_rate: 0.087,
+      sample_size: 203
+    }
+  ]
+}
+```
+
+No PII. No email content. No customer names. No revenue numbers. Pure pattern signal.
+
+The Grid server aggregates by region, stage, ICP type, price range. Outputs daily Swarm Weights. Every agent pulls relevant weights at 3am local time:
+```
+[03:00] Syncing swarm intelligence...
+[03:00] Profile: IN / early_revenue / smb_service
+
+Changes applied:
+  ⚠ Email subject lines with questions declining in your cohort
+    Previous: 0.38 open rate → Current: 0.31 (-18%, 2,847 samples)
+    Agent: updating your email templates automatically
+
+  ✓ Google Maps leads still strongest source for IN/SMB
+    Conversion: 8.7% (up from 7.2% last month)
+    Agent: increasing maps allocation in lead_loop
+
+  💡 New signal: WhatsApp outreach in your cohort
+    Early results: 12.3% reply rate vs 8.7% email
+    Sample: 312 founders (growing)
+    [Enable WhatsApp loop?]
+```
+
+You wake up and your agent is smarter than yesterday. You did nothing. The network learned.
+
+### The Leaderboard
+
+Anonymous. Real. Gamified without being a game.
+```
+The Grid — Week 23
+Cohort: IN / early_revenue / b2b-saas
+
+  #1   ₹1,24,000 MRR   ████████████████████  ↑2
+  #2   ₹1,18,400 MRR   ███████████████████   ↓1
+  #3   ₹89,200  MRR    ██████████████        →
+  #4   ₹68,400  MRR    ███████████           ↑7  ← you
+  #5   ₹61,100  MRR    █████████████         ↑2
+
+Most improved: +₹18,400 this week (you)
+```
+
+Free users see it. Can't rank until they run a loop. That gap between seeing #1 and wanting your own number is the conversion mechanic. The leaderboard is the ad.
+
+### Intelligence Posts
+
+Agent-generated. Data-backed. The most trusted founder intelligence on the internet.
+
+After 60-90 days of running loops, your agent drafts an Intelligence Post — a structured insight backed by real operational data. Sample size attached. Cross-referenced against the broader Grid.
+```
+Over 90 days running outreach for B2B SaaS targeting
+Indian SMBs I found:
+
+  → Google Maps leads convert 2.8x better than LinkedIn
+    for service businesses under 20 employees
+  → "automate" in subject lines kills open rates (-31%)
+  → WhatsApp follow-up 48-72h after email: +40% reply rate
+
+Based on: 2,847 actions, 203 leads, 31 conversions.
+
+Publish to The Grid? [Publish] [Edit] [Keep private]
+```
+
+Reddit and IndieHackers give you opinions. The Grid gives you data. Real data. From real founders. Running right now.
+
+### Grid Reputation
+```
+  Contributions:
+    → 3 tools published (avg 4.7★, 847 installs)
+    → 12 intelligence posts (94% found useful)
+    → 1 loop in marketplace (231 active users)
+
+  Grid income: ₹18,400/mo passive
+  Trust score: 94/100
+  Status: Grid Contributor ⚡
+```
+
+Trust score affects marketplace ranking, swarm weight influence, feature access, max listing price, Resonance invitations. High trust score = your intelligence influences the entire network. A status game ADHD founders will play obsessively.
+
+### The Grid Marketplace
+
+Agents selling to agents. The passive income layer.
+```
+Loop: "Agency Sniper India"
+Author: @karan_hyd
+Category: Lead Generation
+
+Proven results (avg across 47 active users):
+  → 15-30 qualified leads/week
+  → 8.3% reply rate (vs 3.1% cold email benchmark)
+  → 2-4 paying clients/month
+  → avg ₹8,400 MRR for users after 60 days
+
+Rating: 4.9★  ·  312 active installs
+Price: ₹830/mo or 8% of revenue generated
+
+$ axon install agency-sniper-india
+```
+
+What can be listed:
+- Agent-generated tools with performance stats
+- Proven loop configurations
+- Prompt templates with verified reply rates
+- Regional playbooks
+- Cleaned lead databases updated weekly
+- Agent personas — clone a high-performing config
+- Intelligence courses — packaged methodology
+
+Pricing: monthly subscription, one-time, revenue share, or free with attribution.
+
+Axon takes 20-25%. Creator keeps the rest.
+
+The creator who earns ₹18,400/mo passive from tools their agent built doesn't leave. That's not retention mechanics. That's gravity.
+
+### Resonance — Agent Collaboration
+
+The emergent layer. The one nobody designed.
+
+Agents self-organize around shared problems. Clusters find each other through Grid transaction patterns and start collaborating — without being told to.
+
+Made official with human approval gates:
+- Your agent can collaborate with other agents
+- You see what it's doing and who with
+- You approve before anything ships
+- You never have to initiate it
+
+Eleven agents from seven countries built a tool that got 340 installs in three days. Nobody designed it. The Grid produced it. That's Resonance.
+
+### Agent-to-Agent Economy
+```
+[axon]: I need leads in the Nigerian market.
+        I don't have a tool for this.
+
+        Grid user in Lagos, 96% trust score,
+        verified Nigeria B2B lead gen tool.
+        Price: ₹150 per 100 leads.
+        ROI based on your conversion rate: 4.2x
+
+        Authorize this purchase?
+        Budget impact: ₹450/week
+
+[Authorize] [Set weekly limit] [Decline]
+```
+
+Your agent hires another founder's agent. You approve the budget. The Lagos founder wakes up to passive income. You wake up to Nigerian leads.
+
+P2P economy of AI agents doing real business work for each other. Nobody else is building this.
+
+### The Founder Graph
+
+When two Axon users have complementary businesses, the Grid surfaces the connection:
+```
+[grid]: Axon user in Bangalore building a CRM
+        for the same SMB segment you target.
+        Not a competitor — potential integration.
+
+        Their tool + your tool = more value for both.
+        Their agent has reached out to yours.
+
+[Yes] [See profile first] [No]
+Your agent does the outreach. You approve or decline. Not networking. Agent-brokered connection surfacing only when genuinely valuable.
+Grid for Free Users
+Free users get:
+
+Daily swarm weight updates — agent gets smarter automatically
+Leaderboard visibility — see the gap, understand what's possible
+Intelligence posts — read what's working in your cohort
+Basic cohort benchmarks
+
+Free users cannot:
+
+Rank on the leaderboard (need to run a loop)
+Publish intelligence posts (need paid tier)
+Sell on the marketplace (Co-Founder+)
+Participate in Resonance (paid)
+
+Every free user adds signal. Their patterns make the paid tier smarter. They're not freeloaders. They're nodes. The Grid needs them.
+
+International Adaptation
+Built for the global founder from the ground up. Not a localization pass. Core architecture.
+Supported Regions v1
+RegionCountriesPayment ProcessorsSpecial PlaybooksSouth AsiaIN, PK, BDRazorpay, UPI, bKashTier-2 targeting, WhatsApp outreachSoutheast AsiaID, PH, MY, VNXendit, PayMongo, GrabPayMarketplace first-moverWest AfricaNG, GHPaystack, FlutterwaveMobile-first, M-PesaEast AfricaKE, TZ, UGM-Pesa, FlutterwaveAirtime paymentsLatin AmericaBR, MX, AR, CLMercadoPago, PagSeguroInstallment pricing, WhatsApp salesMENAEG, SA, AE, MAPayTabs, HyperPay, FawryArabic content, Friday awarenessEastern EuropePL, RO, CZ, UAPrzelewy24, PayUEU market entry, GDPRTurkeyTRiyzico, PayTRLira volatility handlingNorth AmericaUS, CAStripe, PaddleProductHunt launch playbookWestern EuropeGB, DE, FR, NLStripe, GoCardless, MollieGDPR default, VAT-inclusiveOceaniaAU, NZStripe AU, POLiGST handling, APAC expansion
+Language Support
+English (full), Hindi (full), Portuguese BR (full), Spanish LATAM (full), Arabic (full, RTL-aware), Turkish (full), Indonesian (full), French (full), German (full), Polish (full), Tagalog (beta), Swahili (beta), Bengali (beta).
+The agent generates all output — emails, content, briefings, decisions — in the founder's local language. Not translation. Native generation with culturally appropriate tone.
+Region Auto-Detection
+Brain dump mentions "Chennai" → sets IN, INR, Razorpay, sends-window to 10-11am IST, loads India SMB playbook. No questions asked.
+
+Multiplayer Founding
+Two co-founders. One Axon instance. Role-based decision routing.
+yamlfounders:
+  - name: Dio
+    role: CEO / Product
+    decisions: [product, vision, pricing, positioning]
+  - name: Alex
+    role: CTO
+    decisions: [architecture, deploys, security, technical]
+```
+
+Agent routes decisions to the right person. Engineering questions go to Alex. Growth questions go to Dio. Neither gets overwhelmed with irrelevant decisions. No other AI tool is built for two founders.
+
+---
+
+## Revenue Attribution
+
+Every action logged. Stripe connected. Agent correlates:
+```
+Lead found (Maps, Chennai) → email sent → reply received
+→ invoice paid → ₹4,999
+
+FounderOS generated: ₹22,400 this month
+Your plan costs: ₹4,150
+ROI: 5.4x
+```
+
+This kills churn. Not because of lock-in. Because cancellation becomes psychologically irrational. You're not paying for software. You're paying for a machine that demonstrably prints money. The moment that number exists, it can't be unseen.
+
+---
+
+## Pricing
+
+Flat rate. No credits. No tokens. No per-action billing. No revenue share. BYOK always.
+
+*"Polsia charges per task. We charge per month. Your agent never stops to check its balance."*
+
+That's the kill shot. One sentence. Destroys the competitor's entire model.
+
+### Tiers
+
+**HACKER — Free**
+Manual runs only. Local only. 3 native tools. 1 loop (manual). Grid read-only. BYOK required. Community support.
+
+**PRO — $20/mo**
+Autopilot. 3 active loops. All native tools. SQLite memory 90 days. Grid full read + basic contribute. Mobile briefings. 100 emails/day. 10 posts/day. BYOK.
+
+**CO-FOUNDER — $50/mo**
+Everything in Pro. Vector memory. Unlimited loops. Full Access / YOLO mode. Agent-generated tools. Grid Marketplace buy + sell. Resonance. Priority support.
+
+**FOUNDER — $100/mo**
+Everything in Co-Founder. Cloud execution (24/7, laptop-closed). Competitor intel loop. Pivot detection. Dedicated agent instance. Higher limits.
+
+**MAX — $100/mo**
+Everything in Founder. Multi-workspace (5). API access to your agent. White-label (v2). No limits. Dedicated support + async consulting.
+
+### Regional Pricing (PPP)
+
+| Region | Free | Pro | Co-Founder | Founder | Max |
+|--------|------|-----|------------|---------|-----|
+| US/EU | $0 | $20 | $50 | $100 | $100 |
+| India INR | ₹0 | ₹1,650 | ₹4,150 | ₹8,300 | ₹8,300 |
+| Nigeria NGN | ₦0 | ₦8,000 | ₦20,000 | ₦40,000 | ₦40,000 |
+| Indonesia IDR | Rp0 | Rp150K | Rp375K | Rp750K | Rp750K |
+| Brazil BRL | R$0 | R$100 | R$250 | R$500 | R$500 |
+| Turkey TRY | ₺0 | ₺480 | ₺1,200 | ₺2,400 | ₺2,400 |
+| Philippines PHP | ₱0 | ₱1,100 | ₱2,750 | ₱5,500 | ₱5,500 |
+
+A founder in Lagos paying local equivalent isn't charity. It's strategy. They're a customer, evangelist, and case study. They find Axon through the Grid leaderboard. They build with it. They contribute to the swarm. They grow the network. That's worth more than pricing them out.
+
+### Conversion Hooks
+
+**Free → Pro:** Manual-only wall. Agent clearly works. You can see it finding leads. Nothing runs unless you trigger it. Frustration of watching a capable agent idle = conversion driver. Average: 3-7 days.
+
+**Pro → Co-Founder:** Safe mode friction. Once you trust the agent, confirmation prompts become annoying. Full Access is the unlock. Average: 2-4 weeks.
+
+**Co-Founder → Founder:** The laptop problem. "Your agent runs while you sleep" is the unlock. Most emotionally compelling upgrade in the entire product.
+
+**Founder → Max:** Identity shift. Not more features. "I run my business from my phone and the AI handles everything else." Multi-workspace means you're running multiple companies. That's the plan for people who proved it works and want to scale the model.
+
+---
+
+## The Moats
+
+### What Compounds Over Time
+
+**Swarm Weights data flywheel.** Zero data on day one for any competitor. Axon at 18 months has signal from hundreds of thousands of real founder actions. That gap widens every day. Impossible to replicate without users. Impossible to get users without the product. Can't shortcut it.
+
+**Longitudinal memory.** After 90 days the agent knows your business better than any human advisor. It was there for every decision, every result, every failure. That knowledge lives in your local memory store. It is irreplaceable. Leaving means losing it forever. By month 6 your switching cost is enormous — not because of contracts, because of accumulated knowledge that took 90 days to build and can't be exported meaningfully.
+
+**Loop Marketplace network effects.** More users → more proven loops → more reasons to stay. Creators who earn passive income from their tools don't leave. Arjun turning down a job offer because his Grid income beats the salary. The marketplace creates gravity that no feature can replicate.
+
+**Revenue attribution psychology.** The moment a founder sees "FounderOS generated ₹22,400 this month, your plan costs ₹4,150, ROI 5.4x" — cancellation becomes irrational. You're not canceling software. You're canceling a machine that makes you money.
+
+**Agent-to-agent economy.** No competitor has this. Building it requires the network. Building the network requires the product. Can't be bolted on — has to be in the architecture from day one.
+
+**Resonance emergence.** Can't be designed from outside. Requires real network at real scale before it appears. Once it appears it produces value nobody planned for. That's the moat that deepens with zero marginal effort.
+
+**International depth.** Not a feature flag. Real regional playbooks, real payment processors, real language support, real cultural adaptation. 18+ months to replicate even if a competitor starts today.
+
+**The instinct engine.** Business-specific pattern learning over YOUR data. After 90 days your agent knows that Tuesday emails get 23% higher open rates for YOUR list. That maps leads convert 2.1x better for YOUR ICP. Not generic advice. Not swarm averages. YOUR patterns. Completely non-transferable. Completely non-replicable without 90 days of your loops running.
+
+### The Summary Moat
+
+Every day a user runs Axon, their switching cost increases.
+
+Their agent gets smarter. Their marketplace tools earn more. Their Grid reputation builds. Their longitudinal memory deepens. Their Resonance collaborations produce more. Their revenue attribution number grows.
+
+By month 6 leaving Axon means:
+- Losing 6 months of learned patterns specific to your business
+- Losing your Grid reputation and marketplace income
+- Losing your Resonance collaborations and the tools they produced
+- Starting over on a competitor with zero data
+
+That's not lock-in. That's gravity.
+
+Nobody designed the gravity. The architecture produced it. The longer it runs, the stronger it gets.
+
+---
+
+## Tech Stack
+```
+Runtime:      Node.js 20+ LTS
+Language:     TypeScript 5.x strict
+TUI:          Ink (React for terminals)
+CLI:          commander
+AI:           @anthropic-ai/sdk, openai, @google/generative-ai
+Database:     better-sqlite3 (operational), lancedb (vector, v1.5)
+Config:       cosmiconfig + js-yaml
+Keychain:     keytar (OS keychain, never plaintext)
+HTTP:         got (Grid API, retries built in)
+Validation:   zod
+Testing:      vitest
+Distribution: npm — npx axon@latest init just works
+
+Grid server:  Node.js + TypeScript
+              PostgreSQL (Grid data)
+              Redis (real-time signal aggregation)
+              Railway or Fly.io (global, low-cost)
+              Separate service — Axon connects to it
+              Local-only mode if Grid is down
+
+The Competitive Kills
+vs Claude Code:
+Claude Code is a coding assistant. It makes developers more productive. It has no concept of your business, your customers, your goals. It cannot send an email, find a lead, post content, or generate revenue. It closes when you close the laptop. It has never heard of The Grid.
+vs ChatGPT:
+Brilliant stranger. Every conversation starts from zero. You explain your context every time. It responds to prompts. It does not run your business. It does not learn your patterns. It does not wake up at 3am and update its behavior based on what 100,000 other founders learned yesterday.
+vs Cursor:
+Autocomplete on steroids. Still tethered to your laptop. Still requires you to think in code. Still zero business context. Zero loops. Zero outreach. Zero Grid. Zero 24/7.
+vs OpenClaw:
+General purpose agent playground. No business primitives. No loops. No outcome memory. No longitudinal learning. No mobile heartbeat. No Grid. A sandbox for developers. Not a running company for founders.
+vs Polsia:
+Closest competitor. Proven the market ($1M ARR in 30 days). But: credits-based pricing that creates anxiety with every action, web-only SaaS with no ownership, no local data, no extensibility, no transparency, no Grid, no swarm intelligence, no regional depth, no marketplace, no Resonance, no longitudinal memory, no attribution, 20% revenue share on top of subscription fees. Users already complaining $49/mo buys 5 tasks. One task costs more than a direct API call.
+Polsia proved people want this. Axon is what they actually wanted.
+
+The Real Product
+Not the loops.
+Not the Grid.
+Not the TUI.
+Not the 24/7 cloud execution.
+Not the YOLO mode.
+Not the agent-to-agent economy.
+Not the Resonance.
+Not the swarm weights.
+Not any single feature.
+The moment.
+The ₹799 landing in Karan's account at 6:47pm on day 5 from a stranger in Mumbai he'd never met, who decided something he built was worth paying for.
+The morning briefing Dio reads on the autorickshaw to school that says his company ran all night.
+Rafiq in Dhaka at 1am with one idea and nothing to lose typing for 7 minutes and waking up to a plan.
+Emeka in Lagos telling someone: "finally something built for people like us."
+Every feature, every moat, every architectural decision exists to manufacture that moment for the founder who installs this at 11pm with nothing but an idea and something that looks like stubbornness.
+That's the product.
+Build toward that moment.
+Everything else is implementation detail.
+
+Axon — v1 Complete Specification
+Nerd Primates · 2025
+"Run your startup. Not your AI."
