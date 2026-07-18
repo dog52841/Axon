@@ -1,0 +1,8 @@
+name: default
+goal: "Define your startup goal"
+stage: pre_revenue
+region: IN
+currency: INR
+models:
+  planner: ""
+mode: safe
