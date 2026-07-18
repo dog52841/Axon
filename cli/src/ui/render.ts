@@ -8,14 +8,17 @@ export function renderWelcome(workspace: Workspace): void {
   );
   console.log(
     chalk.dim(
-      `Workspace: ${workspace.config.name} • ${workspace.config.mode.toUpperCase()}`,
+      `Workspace: ${workspace.config.name}  ·  ${workspace.config.mode.toUpperCase()}`,
     ),
   );
-  console.log(chalk.dim("Type /help for commands.\n"));
+  console.log(chalk.dim("─".repeat(56)));
+  console.log(
+    chalk.dim("Type /help for control. Plain text becomes a request.\n"),
+  );
 }
 
 export function renderResult(result: AgentResult): void {
-  console.log(chalk.cyan(`→ ${result.headline}`));
+  console.log(`\n${chalk.cyan("→")} ${result.headline}\n`);
 }
 
 export function renderActivities(activities: Activity[]): void {
@@ -29,5 +32,5 @@ export function renderActivities(activities: Activity[]): void {
 }
 
 export function renderError(message: string): void {
-  console.error(chalk.red(`Error: ${message}`));
+  console.error(`${chalk.red("!")} ${message}`);
 }

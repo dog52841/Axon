@@ -17,12 +17,13 @@ export class Agent {
     const configuredModel = this.workspace.config.models.planner;
     if (!configuredModel) {
       return {
-        headline: "A planner model is needed before I can execute this.",
+        headline:
+          "No planner model is configured. Set one with /model <provider/model>.",
         activities: [activity],
       };
     }
     return {
-      headline: `Planning with ${configuredModel} is not connected yet. No action was taken.`,
+      headline: `Planner ${configuredModel} is configured, but provider execution is not connected yet. No action was taken.`,
       activities: [activity],
     };
   }

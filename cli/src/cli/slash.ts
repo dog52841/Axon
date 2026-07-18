@@ -1,3 +1,4 @@
+import { confirm, isCancel } from "@clack/prompts";
 import chalk from "chalk";
 
 import type { ApprovalQueue } from "../approvals/queue";
@@ -31,14 +32,16 @@ export async function handleSlash(
       await setModel(args, context);
       return;
     case "safe":
-    case "yolo":
-      context.workspace.config.mode = command === "safe" ? "safe" : "full";
+      context.workspace.config.mode = "safe";
       await context.manager.save(context.workspace);
       console.log(
-        chalk.yellow(
-          `Execution mode: ${context.workspace.config.mode.toUpperCase()}`,
+        chalk.green(
+          "Safe mode enabled. Axon will request approval for consequential actions.",
         ),
       );
+      return;
+    case "yolo":
+      await enableFullAccess(context);
       return;
     case "history":
       renderActivities(context.memory.recent());
@@ -148,16 +151,40 @@ function resolveApproval(
 
 function printHelp(): void {
   console.log(`
-/workspace new <name>     Create a workspace
-/workspace switch <name>  Switch workspace
-/workspace list           List workspaces
-/model <provider/model>   Set planner model
-/provider <name>          Set planner provider
-/history                  Show recent activity
-/approve <id> | /deny <id> Resolve an approval
-/tools | /context | /memory | /run  Show current subsystem status
-/status                   Show workspace status
-/safe | /yolo             Change execution mode
-/clear | /exit            Clear screen or exit
+${chalk.bold("WORKSPACE")}
+  /workspace new <name>       Create a workspace
+  /workspace switch <name>    Switch workspace
+  /workspace list             List workspaces
+
+${chalk.bold("AGENT")}
+  /model <provider/model>     Set the planner model
+  /provider <name>            Set the planner provider
+  /run <loop>                 Show loop status
+  /tools                      List connected tools
+
+${chalk.bold("MEMORY & CONTROL")}
+  /history                    Show recent activity
+  /memory search <query>      Search semantic memory
+  /context add <file>         Add context (coming next)
+  /approve <id> | /deny <id>  Resolve a pending approval
+  /safe | /yolo               Change execution mode
+
+${chalk.bold("SYSTEM")}
+  /status  /clear  /exit
 `);
+}
+
+async function enableFullAccess(context: SlashContext): Promise<void> {
+  const result = await confirm({
+    message:
+      "Enable Full Access? Consequential actions may execute without approval.",
+    initialValue: false,
+  });
+  if (isCancel(result) || !result) {
+    console.log(chalk.dim("Full Access was not enabled."));
+    return;
+  }
+  context.workspace.config.mode = "full";
+  await context.manager.save(context.workspace);
+  console.log(chalk.yellow("Full Access enabled for this workspace."));
 }
