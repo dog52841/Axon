@@ -7,7 +7,7 @@ export class MemoryStore {
   private readonly database: Database;
 
   constructor(workspace: Workspace) {
-    this.database = new Database(join(workspace.path, "axon.sqlite"), {
+    this.database = new Database(join(workspace.path, "history.db"), {
       create: true,
     });
     this.database.run(`

@@ -28,6 +28,15 @@ export async function handleSlash(
     case "workspace":
       await handleWorkspace(args, context);
       return;
+    case "new":
+      await handleWorkspace(["new", ...args], context);
+      return;
+    case "open":
+      await handleWorkspace(["switch", ...args], context);
+      return;
+    case "init":
+      printWorkspaceReady(context);
+      return;
     case "model":
       await setModel(args, context);
       return;
@@ -46,12 +55,32 @@ export async function handleSlash(
     case "history":
       renderActivities(context.memory.recent());
       return;
+    case "tasks":
+      printTasks(context);
+      return;
     case "approve":
     case "deny":
       resolveApproval(command, args, context);
       return;
     case "provider":
       await setProvider(args, context);
+      return;
+    case "providers":
+      console.log(
+        context.workspace.config.models.provider
+          ? `Selected provider: ${context.workspace.config.models.provider}`
+          : "No provider selected. Use /provider <name>.",
+      );
+      return;
+    case "models":
+      console.log(
+        context.workspace.config.models.planner
+          ? `Planner: ${context.workspace.config.models.planner}`
+          : "No planner model selected. Use /model <provider/model>.",
+      );
+      return;
+    case "doctor":
+      printDoctor(context);
       return;
     case "tools":
       console.log("No tools are connected yet.");
@@ -149,28 +178,63 @@ function resolveApproval(
   );
 }
 
+function printTasks(context: SlashContext): void {
+  const pending = context.approvals.pending();
+  if (pending.length === 0) {
+    console.log("No pending approvals.");
+    return;
+  }
+  for (const approval of pending) {
+    console.log(`[${approval.id}] ${approval.description}`);
+  }
+}
+
+function printWorkspaceReady(context: SlashContext): void {
+  console.log(`Workspace ${context.workspace.config.name} is ready.`);
+  console.log(`Goal: ${context.workspace.config.goal}`);
+  console.log(
+    "Next: /provider <name>, /model <provider/model>, then describe a task.",
+  );
+}
+
+function printDoctor(context: SlashContext): void {
+  const { config, path } = context.workspace;
+  console.log(`${chalk.green("✓")} workspace: ${path}`);
+  console.log(
+    `${config.models.planner ? chalk.green("✓") : chalk.yellow("!")} planner model: ${config.models.planner || "not configured"}`,
+  );
+  console.log(
+    `${config.models.provider ? chalk.green("✓") : chalk.yellow("!")} provider: ${config.models.provider || "not configured"}`,
+  );
+  console.log(`${chalk.green("✓")} local storage: history.db, tasks.db, logs/`);
+}
+
 function printHelp(): void {
   console.log(`
 ${chalk.bold("WORKSPACE")}
   /workspace new <name>       Create a workspace
   /workspace switch <name>    Switch workspace
   /workspace list             List workspaces
+  /new <name> | /open <name>  Create or open a workspace
+  /init                       Show next setup steps
 
 ${chalk.bold("AGENT")}
   /model <provider/model>     Set the planner model
   /provider <name>            Set the planner provider
+  /providers | /models         Inspect current provider/model
   /run <loop>                 Show loop status
   /tools                      List connected tools
 
 ${chalk.bold("MEMORY & CONTROL")}
   /history                    Show recent activity
+  /tasks                      Show approvals awaiting a decision
   /memory search <query>      Search semantic memory
   /context add <file>         Add context (coming next)
   /approve <id> | /deny <id>  Resolve a pending approval
   /safe | /yolo               Change execution mode
 
 ${chalk.bold("SYSTEM")}
-  /status  /clear  /exit
+  /status  /doctor  /clear  /exit
 `);
 }
 

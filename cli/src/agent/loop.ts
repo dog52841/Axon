@@ -1,4 +1,5 @@
 import type { MemoryStore } from "../memory/sqlite";
+import { streamOpenAIResponse } from "../providers/openai";
 import type { AgentResult, Workspace } from "../types";
 
 export class Agent {
@@ -7,15 +8,61 @@ export class Agent {
     private readonly memory: MemoryStore,
   ) {}
 
-  async run(input: string): Promise<AgentResult> {
+  async run(
+    input: string,
+    onText?: (delta: string) => void,
+  ): Promise<AgentResult> {
+    const activity = this.persist(input);
+    const plan = this.plan();
+    if (!plan || !onText) return this.summarize(plan, activity);
+    const [provider, model] = parseModel(
+      plan,
+      this.workspace.config.models.provider,
+    );
+    if (provider !== "openai") return this.summarize(plan, activity);
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return {
+        headline:
+          "OPENAI_API_KEY is not set. Add it to .env or your environment, then restart Axon.",
+        activities: [activity],
+      };
+    }
+    await streamOpenAIResponse({
+      apiKey,
+      model,
+      requestID: crypto.randomUUID(),
+      instructions: systemInstructions(this.workspace),
+      input,
+      onText,
+    });
+    this.memory.append({
+      at: new Date().toISOString(),
+      kind: "response.completed",
+      message: "OpenAI response completed",
+    });
+    return { headline: "Completed.", activities: [activity], streamed: true };
+  }
+
+  private persist(input: string) {
     const activity = {
       at: new Date().toISOString(),
       kind: "request.received",
       message: input,
     };
     this.memory.append(activity);
-    const configuredModel = this.workspace.config.models.planner;
-    if (!configuredModel) {
+    return activity;
+  }
+
+  private plan(): string | null {
+    return this.workspace.config.models.planner || null;
+  }
+
+  private summarize(
+    plan: string | null,
+    activity: AgentResult["activities"][number],
+  ): AgentResult {
+    if (!plan) {
       return {
         headline:
           "No planner model is configured. Set one with /model <provider/model>.",
@@ -23,8 +70,29 @@ export class Agent {
       };
     }
     return {
-      headline: `Planner ${configuredModel} is configured, but provider execution is not connected yet. No action was taken.`,
+      headline: `Planner ${plan} is configured, but provider execution is not connected yet. No action was taken.`,
       activities: [activity],
     };
   }
+}
+
+function parseModel(
+  value: string,
+  selectedProvider?: string,
+): [string, string] {
+  const separator = value.indexOf("/");
+  if (separator === -1) return [selectedProvider || "", value];
+  return [value.slice(0, separator), value.slice(separator + 1)];
+}
+
+function systemInstructions(workspace: Workspace): string {
+  return [
+    "You are Axon, an execution-first startup co-founder.",
+    `Workspace: ${workspace.config.name}.`,
+    `Goal: ${workspace.config.goal}.`,
+    "Give concise, concrete next actions. Do not claim to have taken an action unless a tool result confirms it.",
+    workspace.config.mode === "safe"
+      ? "Safe mode is active. Surface irreversible, financial, legal, security, and ambiguous actions for approval."
+      : "Full Access is active, but still state consequential actions clearly.",
+  ].join("\n");
 }

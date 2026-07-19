@@ -24,4 +24,5 @@ export interface Activity {
 export interface AgentResult {
   headline: string;
   activities: Activity[];
+  streamed?: boolean;
 }

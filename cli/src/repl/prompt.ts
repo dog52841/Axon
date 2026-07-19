@@ -60,7 +60,16 @@ export class Prompt {
         await handleSlash(input.command, input.args, this.context());
         return;
       }
-      renderResult(await this.agent.run(input.value));
+      let streamed = false;
+      const result = await this.agent.run(input.value, (delta) => {
+        if (!streamed) {
+          streamed = true;
+          stdout.write("\n→ ");
+        }
+        stdout.write(delta);
+      });
+      if (streamed) stdout.write("\n\n");
+      if (!result.streamed) renderResult(result);
     } catch (error) {
       renderError(
         error instanceof Error ? error.message : "Unexpected Axon error",

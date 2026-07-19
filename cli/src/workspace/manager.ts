@@ -17,6 +17,7 @@ export class WorkspaceManager {
     const path = this.pathFor(normalized);
     await mkdir(join(this.root, "workspaces"), { recursive: true });
     await mkdir(path, { recursive: false });
+    await mkdir(join(path, "logs"), { recursive: true });
     const config: WorkspaceConfig = {
       name: normalized,
       goal: "Define your startup goal",
