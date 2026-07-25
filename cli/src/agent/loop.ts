@@ -1,3 +1,4 @@
+import type { SettingsStore } from "../config/settings";
 import type { MemoryStore } from "../memory/sqlite";
 import { streamOpenAIResponse } from "../providers/openai";
 import type { AgentResult, Workspace } from "../types";
@@ -6,6 +7,7 @@ export class Agent {
   constructor(
     private readonly workspace: Workspace,
     private readonly memory: MemoryStore,
+    private readonly settings: SettingsStore,
   ) {}
 
   async run(
@@ -13,18 +15,19 @@ export class Agent {
     onText?: (delta: string) => void,
   ): Promise<AgentResult> {
     const activity = this.persist(input);
-    const plan = this.plan();
+    const settings = await this.settings.read();
+    const plan = this.plan(settings.defaultModel);
     if (!plan || !onText) return this.summarize(plan, activity);
     const [provider, model] = parseModel(
       plan,
-      this.workspace.config.models.provider,
+      this.workspace.config.models.provider || settings.defaultProvider,
     );
     if (provider !== "openai") return this.summarize(plan, activity);
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = await this.settings.apiKey(provider);
     if (!apiKey) {
       return {
         headline:
-          "OPENAI_API_KEY is not set. Add it to .env or your environment, then restart Axon.",
+          "No OpenAI API key is configured. Run /settings key set openai to connect this workspace.",
         activities: [activity],
       };
     }
@@ -54,8 +57,8 @@ export class Agent {
     return activity;
   }
 
-  private plan(): string | null {
-    return this.workspace.config.models.planner || null;
+  private plan(defaultModel: string): string | null {
+    return this.workspace.config.models.planner || defaultModel || null;
   }
 
   private summarize(

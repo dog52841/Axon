@@ -1,17 +1,26 @@
-import { confirm, isCancel } from "@clack/prompts";
+import { confirm, isCancel, password } from "@clack/prompts";
 import chalk from "chalk";
 
 import type { ApprovalQueue } from "../approvals/queue";
+import type { SettingsStore } from "../config/settings";
 import type { MemoryStore } from "../memory/sqlite";
 import type { Workspace } from "../types";
-import { renderActivities } from "../ui/render";
+import {
+  renderActivities,
+  renderCommandDetail,
+  renderCommandList,
+  renderSettings,
+  renderStatus,
+} from "../ui/render";
 import type { WorkspaceManager } from "../workspace/manager";
+import { commands, findCommand } from "./commands";
 
 export interface SlashContext {
   workspace: Workspace;
   manager: WorkspaceManager;
   memory: MemoryStore;
   approvals: ApprovalQueue;
+  settings: SettingsStore;
   switchWorkspace(name: string): Promise<void>;
   exit(): void;
 }
@@ -23,7 +32,7 @@ export async function handleSlash(
 ): Promise<void> {
   switch (command) {
     case "help":
-      printHelp();
+      printHelp(args);
       return;
     case "workspace":
       await handleWorkspace(args, context);
@@ -53,7 +62,7 @@ export async function handleSlash(
       await enableFullAccess(context);
       return;
     case "history":
-      renderActivities(context.memory.recent());
+      renderActivities(context.memory.recent(readLimit(args[0])));
       return;
     case "tasks":
       printTasks(context);
@@ -64,6 +73,9 @@ export async function handleSlash(
       return;
     case "provider":
       await setProvider(args, context);
+      return;
+    case "settings":
+      await handleSettings(args, context);
       return;
     case "providers":
       console.log(
@@ -83,24 +95,27 @@ export async function handleSlash(
       printDoctor(context);
       return;
     case "tools":
-      console.log("No tools are connected yet.");
+      console.log(
+        "No execution tools are connected. Axon can plan and persist workspace activity, but it will not claim to act until a tool is installed.",
+      );
       return;
     case "context":
-      console.log("Context files are not connected yet.");
+      console.log(
+        "Axon currently uses the active workspace goal, configuration, and local activity history as context.",
+      );
       return;
     case "memory":
-      console.log(
-        "Semantic memory is not connected yet. Use /history for local activity.",
-      );
+      searchMemory(args, context);
       return;
     case "run":
       console.log("No background loops are registered yet.");
       return;
     case "status":
-      console.log(
-        `${context.workspace.config.name} • ${context.workspace.config.stage} • ${context.workspace.config.mode.toUpperCase()}`,
-      );
-      console.log(`Goal: ${context.workspace.config.goal}`);
+      renderStatus({
+        workspace: context.workspace,
+        activityCount: context.memory.count(),
+        pendingApprovals: context.approvals.pending().length,
+      });
       return;
     case "clear":
       console.clear();
@@ -117,7 +132,8 @@ async function handleWorkspace(
   args: string[],
   context: SlashContext,
 ): Promise<void> {
-  const [operation, name] = args;
+  const [operation, ...nameParts] = args;
+  const name = nameParts.join(" ");
   if (operation === "list") {
     const workspaces = await context.manager.list();
     console.log(
@@ -185,7 +201,9 @@ function printTasks(context: SlashContext): void {
     return;
   }
   for (const approval of pending) {
-    console.log(`[${approval.id}] ${approval.description}`);
+    console.log(
+      `${chalk.yellow(`[${approval.id}]`)} ${approval.description} ${chalk.dim(`· ${approval.createdAt.slice(0, 16).replace("T", " ")}`)}`,
+    );
   }
 }
 
@@ -209,33 +227,20 @@ function printDoctor(context: SlashContext): void {
   console.log(`${chalk.green("✓")} local storage: history.db, tasks.db, logs/`);
 }
 
-function printHelp(): void {
-  console.log(`
-${chalk.bold("WORKSPACE")}
-  /workspace new <name>       Create a workspace
-  /workspace switch <name>    Switch workspace
-  /workspace list             List workspaces
-  /new <name> | /open <name>  Create or open a workspace
-  /init                       Show next setup steps
-
-${chalk.bold("AGENT")}
-  /model <provider/model>     Set the planner model
-  /provider <name>            Set the planner provider
-  /providers | /models         Inspect current provider/model
-  /run <loop>                 Show loop status
-  /tools                      List connected tools
-
-${chalk.bold("MEMORY & CONTROL")}
-  /history                    Show recent activity
-  /tasks                      Show approvals awaiting a decision
-  /memory search <query>      Search semantic memory
-  /context add <file>         Add context (coming next)
-  /approve <id> | /deny <id>  Resolve a pending approval
-  /safe | /yolo               Change execution mode
-
-${chalk.bold("SYSTEM")}
-  /status  /doctor  /clear  /exit
-`);
+function printHelp(args: string[]): void {
+  const name = args[0]?.replace(/^\//, "");
+  if (!name) {
+    renderCommandList(commands);
+    return;
+  }
+  const command = findCommand(name);
+  if (!command) {
+    console.log(
+      chalk.yellow(`No command named /${name}. Type /help to browse commands.`),
+    );
+    return;
+  }
+  renderCommandDetail(command);
 }
 
 async function enableFullAccess(context: SlashContext): Promise<void> {
@@ -251,4 +256,122 @@ async function enableFullAccess(context: SlashContext): Promise<void> {
   context.workspace.config.mode = "full";
   await context.manager.save(context.workspace);
   console.log(chalk.yellow("Full Access enabled for this workspace."));
+}
+
+async function handleSettings(
+  args: string[],
+  context: SlashContext,
+): Promise<void> {
+  const [operation, ...rest] = args;
+  if (!operation) {
+    const settings = await context.settings.read();
+    const configuredProviders = await context.settings.configuredProviders();
+    renderSettings({
+      ...settings,
+      configuredProviders,
+      paths: context.settings.paths(),
+    });
+    return;
+  }
+  if (operation === "path") {
+    const paths = context.settings.paths();
+    console.log(`Settings: ${paths.settings}`);
+    console.log(`Auth: ${paths.auth} (owner-only)`);
+    return;
+  }
+  if (operation === "provider") {
+    const provider = rest.join(" ");
+    if (!provider) {
+      console.log("Usage: /settings provider <name>");
+      return;
+    }
+    await context.settings.update({ defaultProvider: provider });
+    console.log(`Default provider: ${provider}`);
+    return;
+  }
+  if (operation === "model") {
+    const model = rest.join(" ");
+    if (!model) {
+      console.log("Usage: /settings model <provider/model>");
+      return;
+    }
+    await context.settings.update({ defaultModel: model });
+    console.log(`Default model: ${model}`);
+    return;
+  }
+  if (operation === "key") {
+    await handleApiKey(rest, context);
+    return;
+  }
+  console.log(
+    "Usage: /settings [provider <name>|model <provider/model>|key set|clear <provider>|path]",
+  );
+}
+
+async function handleApiKey(
+  args: string[],
+  context: SlashContext,
+): Promise<void> {
+  const [operation, provider] = args;
+  if (operation === "set" && provider) {
+    const value = await password({
+      message: `API key for ${provider}`,
+      validate: (input) =>
+        input.trim() ? undefined : "An API key is required.",
+    });
+    if (isCancel(value)) {
+      console.log(chalk.dim("API key setup cancelled."));
+      return;
+    }
+    await context.settings.setApiKey(provider, value);
+    console.log(
+      chalk.green(`Stored ${provider} credentials in Axon local auth.`),
+    );
+    return;
+  }
+  if (operation === "clear" && provider) {
+    const confirmed = await confirm({
+      message: `Remove ${provider} credentials from Axon local auth?`,
+      initialValue: false,
+    });
+    if (isCancel(confirmed) || !confirmed) {
+      console.log(chalk.dim("API key was not removed."));
+      return;
+    }
+    console.log(
+      (await context.settings.clearApiKey(provider))
+        ? `Removed ${provider} credentials.`
+        : `No ${provider} credentials were configured.`,
+    );
+    return;
+  }
+  const providers = await context.settings.configuredProviders();
+  console.log(
+    providers.length
+      ? `Configured provider keys: ${providers.join(", ")}`
+      : "No provider keys configured. Use /settings key set <provider>.",
+  );
+}
+
+function searchMemory(args: string[], context: SlashContext): void {
+  const [operation, ...queryParts] = args;
+  if (operation !== "search" || queryParts.length === 0) {
+    console.log("Usage: /memory search <query>");
+    return;
+  }
+  const activities = context.memory.search(queryParts.join(" "));
+  if (activities.length === 0) {
+    console.log(chalk.dim("No matching workspace activity."));
+    return;
+  }
+  renderActivities(activities);
+}
+
+function readLimit(value: string | undefined): number {
+  if (!value) return 20;
+  const limit = Number(value);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+    throw new Error("History limit must be an integer between 1 and 100.");
+  }
+  return limit;
 }

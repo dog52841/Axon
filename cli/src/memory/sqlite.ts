@@ -35,6 +35,24 @@ export class MemoryStore {
       .reverse();
   }
 
+  search(query: string, limit = 20): Activity[] {
+    const pattern = `%${query.trim().replace(/%|_/g, "\\$&")}%`;
+    return this.database
+      .query<Activity, [string, number]>(
+        "SELECT at, kind, message FROM activity WHERE message LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT ?",
+      )
+      .all(pattern, limit)
+      .reverse();
+  }
+
+  count(): number {
+    return (
+      this.database
+        .query<{ count: number }, []>("SELECT COUNT(*) AS count FROM activity")
+        .get()?.count ?? 0
+    );
+  }
+
   close(): void {
     this.database.close();
   }
